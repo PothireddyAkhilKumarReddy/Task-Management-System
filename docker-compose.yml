@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: project
+    ports:
+      - "3307:3306" # Map to 3307 to avoid conflict with your local MySQL on 3306
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - taskflow-network
+
+  backend:
+    build: ./backend/project
+    container_name: taskflow-backend
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/project?allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    depends_on:
+      - mysql
+    networks:
+      - taskflow-network
+
+  frontend:
+    build: ./FsadZip
+    container_name: taskflow-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - taskflow-network
+
+volumes:
+  mysql_data:
+
+networks:
+  taskflow-network:
+    driver: bridge

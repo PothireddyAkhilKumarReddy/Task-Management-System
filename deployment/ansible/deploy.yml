@@ -1,0 +1,46 @@
+ .---
+- name: Deploy TaskFlow Application to Kubernetes
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  
+  vars:
+    k8s_dir: "../k8s"
+
+  tasks:
+    - name: Ensure Kubernetes manifests exist
+      stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ k8s_dir }}/mysql.yaml"
+        - "{{ k8s_dir }}/backend.yaml"
+        - "{{ k8s_dir }}/frontend.yaml"
+      register: manifest_files
+
+    - name: Apply MySQL Manifest
+      command: kubectl apply -f {{ k8s_dir }}/mysql.yaml
+      register: mysql_out
+      changed_when: "'created' in mysql_out.stdout or 'configured' in mysql_out.stdout"
+
+    - name: Wait for MySQL to be ready (optional check)
+      command: kubectl rollout status deployment/mysql
+      ignore_errors: yes
+
+    - name: Apply Backend Manifest
+      command: kubectl apply -f {{ k8s_dir }}/backend.yaml
+      register: backend_out
+      changed_when: "'created' in backend_out.stdout or 'configured' in backend_out.stdout"
+
+    - name: Apply Frontend Manifest
+      command: kubectl apply -f {{ k8s_dir }}/frontend.yaml
+      register: frontend_out
+      changed_when: "'created' in frontend_out.stdout or 'configured' in frontend_out.stdout"
+
+    - name: Display Deployment Status
+      command: kubectl get pods,svc
+      register: k8s_status
+      changed_when: false
+
+    - name: Show Status
+      debug:
+        var: k8s_status.stdout_lines
